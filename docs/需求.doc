@@ -1,0 +1,135 @@
+# 智能Git提交工具需求文档
+
+## 一、核心功能模块
+```python:d:\jobFiles\gptcomet-master\git_commit_generator\core.py
+class CommitGenerator:
+    def generate_commit_message(self, diff: str) -> str:
+        """调用大模型生成commit信息
+        Args:
+            diff: git diff输出内容
+        Returns:
+            符合规范的commit message
+        """
+
+class GitOperator:
+    def auto_commit_push(self, message: str):
+        """一键式提交（包含add/commit/push）
+        Args:
+            message: 提交信息（支持用户编辑）
+        """
+```
+
+## 二、功能需求明细
+
+### 1. 多语言支持
+```python:d:\jobFiles\gptcomet-master\git_commit_generator\i18n.py
+class Localization:
+    def __init__(self, lang='zh_CN'):
+        self.lang = lang
+        self.translations = {
+            'commit_prompt': {
+                'zh_CN': '请输入提交信息：',
+                'en_US': 'Enter commit message:'
+            }
+        }
+
+    def get_text(self, key: str) -> str:
+        return self.translations.get(key, {}).get(self.lang, '')
+```
+
+### 2. 用户配置系统
+```python:d:\jobFiles\gptcomet-master\git_commit_generator\config.py
+class ConfigManager:
+    def __init__(self):
+        self.config_path = os.path.expanduser('~/.gitcommitrc')
+        
+    def set_config(self, key: str, value: str):
+        """保存用户自定义配置
+        Example:
+            config --set model.provider=deepseek
+            config --set api.key=your_api_key
+        """
+
+    def get_model_config(self) -> dict:
+        """获取模型相关配置"""
+```
+
+### 3. 大模型适配层
+```python:d:\jobFiles\gptcomet-master\git_commit_generator\models\adapter.py
+class ModelAdapter:
+    def __init__(self, provider: str):
+        """支持不同模型提供商
+        Args:
+            provider: deepseek/openai/google等
+        """
+
+    def generate(self, prompt: str) -> str:
+        """统一生成接口"""
+```
+
+### 4. 安全执行保障
+```python:d:\jobFiles\gptcomet-master\git_commit_generator\safety.py
+class SafetyCheck:
+    def validate_git_status(self):
+        """检查git仓库状态
+        验证内容：
+        - 是否在git仓库中
+        - 是否存在未提交更改
+        - 分支保护状态
+        """
+
+    def confirm_action(self, prompt: str) -> bool:
+        """关键操作二次确认"""
+```
+
+## 三、功能流程图
+```
+用户操作流程：
+1. 执行智能提交命令
+   → 2. 检查git状态（未更改则终止）
+   → 3. 生成diff并发送给AI模型
+   → 4. 展示生成的commit信息
+   → 5. [可选]用户编辑信息
+   → 6. 执行完整提交流程（add-commit-push）
+```
+
+## 四、技术实现方案
+
+### 1. 命令行参数设计
+```bash
+# 示例命令：
+git-ai --lang en_US             # 设置英文界面
+git-ai config --set model=deepseek  # 配置模型
+git-ai push --dry-run           # 安全模式运行
+```
+
+### 2. 配置项规范（.gitcommitrc）
+```ini:d:\jobFiles\gptcomet-master\git_commit_generator\default_config.ini
+[model]
+provider = deepseek
+endpoint = https://api.deepseek.com/v1
+
+[security]
+confirm_push = true
+max_diff_size = 4096
+```
+
+### 3. 异常处理机制
+- 网络连接失败重试机制
+- API调用频率限制
+- 本地diff缓存机制（生成失败时使用）
+
+## 五、安全边界控制
+1. 关键操作前自动创建备份分支
+2. 敏感信息（API Key）加密存储
+3. 默认启用push操作确认
+4. 限制大模型接收的diff文件大小
+5. 提供--dry-run模式验证操作
+
+## 六、依赖管理
+```text:d:\jobFiles\gptcomet-master\git_commit_generator\requirements.txt
+python>=3.8
+gitpython>=3.1.0
+requests>=2.25.1
+pyyaml>=5.4.1
+```

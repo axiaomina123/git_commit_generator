@@ -1,0 +1,12 @@
+[project]
+name = "git-commit-generator"
+version = "0.1.0"
+dependencies = [
+    "gitpython >=3.1",
+    "questionary>=2.1.0",
+    "requests >=2.25",
+    "typer>=0.15.2",
+]
+
+[project.scripts]
+git-ai = "git_commit_generator.cli.main:app"
