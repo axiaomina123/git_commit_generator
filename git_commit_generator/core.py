@@ -23,11 +23,31 @@ class CommitGenerator:
             return ''
 
     def generate_commit_message(self, diff_content: str) -> str:
-        # provider_config = self.config.get('providers')[self.current_provider]
+        prompt = self._build_prompt(diff_content)
         try:
-            return ModelAdapter(self.current_provider).generate(diff_content)
+            return ModelAdapter(self.current_provider).generate(prompt)
         except Exception as e:
             raise RuntimeError(f"API调用失败: {str(e)}")
+
+    def _build_prompt(self, diff_content: str) -> str:
+        return f"""
+        根据以下代码变更生成规范的Git提交信息：
+        
+        【代码变更】
+        {diff_content}
+        
+        【生成要求】
+        1. 识别修改类型（功能新增/缺陷修复/文档更新/重构/配置变更等）
+        2. 明确影响范围（模块/组件/API端点）
+        3. 提取关键变更点（不超过3个核心修改）
+        4. 遵循约定式提交格式：<类型>[可选 范围]: <描述>\n\n[可选正文]\n\n[可选脚注]
+        
+        示例：
+        feat(authentication): 添加JWT令牌验证功能
+        \n\n        - 新增JWT生成与验证中间件
+        - 集成配置项到security模块
+        - 补充Swagger文档说明
+        """.strip()
 
     def execute_commit(self, message: str):
         try:
