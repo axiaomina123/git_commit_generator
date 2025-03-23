@@ -13,8 +13,6 @@ class BaseProvider:
         self.model_name = providers.get(self.current_provider, {}).get('model_name', '')
         self.model_url = providers.get(self.current_provider, {}).get('model_url', '')
         
-
-
     # 获取所有模型提供商
     def _read_provider_file(self, error_message):
         try:
@@ -40,7 +38,6 @@ class BaseProvider:
         providers = self._read_provider_file("模型加载失败")
         return list(providers.keys())
 
-
     def get_model_name(self, provider_name: str) -> str:
         """
         获取指定提供商的模型名称
@@ -49,7 +46,6 @@ class BaseProvider:
         """
         providers = self._read_provider_file("无法加载模型名称")
         return providers.get(provider_name, {}).get('model_name', '')
-
 
     def get_model_url(self, provider_name: str) -> str:
         """
@@ -212,3 +208,40 @@ class ChatGLMProvider(BaseProvider):
             return response.json()['choices'][0]['message']['content'].strip()
         except Exception as e:
             raise Exception(f"ChatGLM API请求失败: {str(e)}")
+
+class OtherProvider(BaseProvider):
+    def __init__(self):
+        super().__init__()
+
+    def generate(self, prompt: str) -> str:
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "stream": False,
+            "max_tokens": self.max_tokens,
+            "stop": None,
+            "temperature": 0.7,
+            "top_p": 0.7,
+            "top_k": 50,
+            "frequency_penalty": 0.5,
+            "n": 1,
+            # "response_format": {"type": "text"},
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            print(self.model_name, self.model_url)
+            response = api.post(self.model_url, headers=headers, json=payload)
+            # print(response.json())
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content'].strip()
+        except Exception as e:
+            raise Exception(f"DeepSeek API请求失败: {str(e)}")

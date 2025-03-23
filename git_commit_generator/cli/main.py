@@ -165,10 +165,10 @@ def commit(
 
         live.update(Spinner(name="dots", text="正在生成commit信息..."))
         commit_msg = generator.generate_commit_message(diff_content)
-    # console.print(f"[bold green]生成结果：[/bold green]\n{commit_msg}")
+    console.print(f"[bold green]生成结果：[/bold green]\n{commit_msg}")
 
     if preview or retry:
-        Console().print(f"[bold green]生成结果：[/bold green]\n{commit_msg}")
+        console.print(f"[bold green]生成结果：[/bold green]\n{commit_msg}")
         return
 
     if typer.confirm("是否提交该信息？"):

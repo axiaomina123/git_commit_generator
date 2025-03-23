@@ -22,11 +22,11 @@ class UrlValidator(FieldValidator):
             raise ValueError("无效的URL格式，必须包含协议和域名")
         
         # 可选连通性检查（根据性能需求决定是否启用）
-        try:
-            resp = requests.head(value, timeout=3)
-            if resp.status_code >= 400:
-                raise ValueError(f"URL无法访问，状态码：{resp.status_code}")
-        except requests.RequestException:
+        # try:
+        #     resp = requests.head(value, timeout=3)
+        #     if resp.status_code >= 400:
+        #         raise ValueError(f"URL无法访问，状态码：{resp.status_code}")
+        # except requests.RequestException:
             pass
             
         return value

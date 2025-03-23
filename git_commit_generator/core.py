@@ -47,6 +47,8 @@ class CommitGenerator:
         \n\n        - 新增JWT生成与验证中间件
         - 集成配置项到security模块
         - 补充Swagger文档说明
+
+        你的返回只包含提交信息，不要包含任何其他内容。
         """.strip()
 
     def execute_commit(self, message: str):
