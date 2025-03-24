@@ -156,15 +156,23 @@ def commit(
     
     from rich.live import Live
     spinner = Spinner(name="dots", text="正在分析代码变更...")
-    
-    with Live(spinner, refresh_per_second=12) as live:
-        diff_content = generator.get_staged_diff()
-        if not diff_content:
-            typer.echo("没有检测到暂存区文件变更")
-            raise typer.Exit(code=1)
+    typer.echo("正在检查项目状态...")
+    diff_content = generator.get_staged_diff()
+    if not diff_content:
+        typer.echo("没有检测到暂存区文件变更")
+        raise typer.Exit(code=1)
 
-        live.update(Spinner(name="dots", text="正在生成commit信息..."))
+    with Live(Spinner(name="dots", text="正在生成commit信息...")) as live:
         commit_msg = generator.generate_commit_message(diff_content)
+    # with Live(spinner, refresh_per_second=12) as live:
+    #     diff_content = generator.get_staged_diff()
+    #     if not diff_content:
+    #         # typer.echo("没有检测到暂存区文件变更")
+    #         raise typer.Abort("没有检测到暂存区文件变更")
+    #         # raise typer.Exit(code=1)
+
+    #     live.update(Spinner(name="dots", text="正在生成commit信息..."))
+    #     commit_msg = generator.generate_commit_message(diff_content)
     console.print(f"[bold green]生成结果：[/bold green]\n{commit_msg}")
 
     if preview or retry:
