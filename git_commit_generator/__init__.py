@@ -15,4 +15,4 @@ Git Commit Generator 是一个基于AI的Git提交信息生成工具，帮助开
 - 多语言支持
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

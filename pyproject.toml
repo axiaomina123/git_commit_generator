@@ -1,6 +1,6 @@
 [project]
-name = "git-commit-generator"
-version = "0.1.0"
+name = "quick-auto-git"
+version = "0.1.1"
 description = "基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息"
 authors = [
     {name = "xiaoming", email = "xiaomindexiaomin@126.com"}
