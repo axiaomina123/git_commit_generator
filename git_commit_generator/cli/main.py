@@ -24,8 +24,9 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
   """   一个基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息。
 
   [bold]可用命令:[/]
-  [bold]commit[/]  - 智能生成并提交Git commit信息
-  [bold]config[/]  - 配置管理系统
+  [bold]commit[/]    - 智能生成并提交Git commit信息
+  [bold]quick-push[/] - 快速完成add、commit和push操作
+  [bold]config[/]    - 配置管理系统
 
 使用 [bold]git-ai COMMAND --help[/] 查看命令详细用法""",
         title="[bold green]Git-AI[/] 智能提交工具 🚀",
@@ -92,29 +93,31 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
         raise typer.Exit(code=1)
     
     config_manager = ConfigManager()
-    config_manager.set(key, value, provider_name)
+    config_manager.config_set(key, value, provider_name)
     panel = Panel(
         f"[bold green]成功设置[/] {key}={value}",
         border_style="green",
-        padding=(1, 2)
+        padding=(0, 1)
     )
     console.print(panel)
 
 @config_app.command("get", help="查询指定配置项的当前值")
-def config_get(key: str = typer.Argument(None), provider_name: str = typer.Option(None, "--provider", "-p", 
-help="服务商名称(如: openai/anthropic)"), 
-help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
+def config_get(key: str = typer.Argument(None), 
+               provider_name: str = typer.Option(None, "--provider", "-p", help="服务商名称(如: openai/anthropic)"), 
+               show_full_key: bool = typer.Option(False, "--show-full-key", "-f", help="显示完整的API密钥（仅当key为api_key时有效）"),
+               help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
     if help:
         panel = Panel(
             """[bold]命令:[/] git-ai config get <key> [options]
 
 [bold]参数:[/]
-  <key>                  配置项名称
-  -p, --provider TEXT   服务商名称(如: openai/anthropic)
+  <key>                 配置项名称
+  -p, --provider        服务商名称(显示当前使用的服务商信息) 
+  -f, --show-full-key   显示完整的API密钥（仅当key为api_key时有效）
   -h, --help            显示帮助信息
 
 [bold]示例:[/]
-  git-ai config get api_key
+  git-ai config get current_provider
   git-ai config get max_tokens -p anthropic""",
             title="[bold green]Git-AI[/] 查询配置项",
             border_style="green",
@@ -124,21 +127,23 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
         raise typer.Exit()
     
     config_manager = ConfigManager()
-    value = config_manager.get(key, provider_name)
+    value = config_manager.get(key, provider_name, mask_api_key=not show_full_key)
     panel = Panel(
-        f"{key}: {value}",
+        f"{key}: {value}" if key else f'{value}',
         border_style="green",
-        padding=(1, 2)
+        padding=(0, 1)
     )
     console.print(panel)
 
 @config_app.command("list", help="显示所有已存储的配置项")
-def config_list(help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
+def config_list(show_full_key: bool = typer.Option(False, "--show-full-key", "-f", help="显示完整的API密钥"),
+               help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
     if help:
         panel = Panel(
             """[bold]命令:[/] git-ai config list
 
 [bold]参数:[/]
+  -f, --show-full-key   显示完整的API密钥（默认为掩码显示）
   -h, --help            显示帮助信息
 
 [bold]描述:[/]
@@ -151,7 +156,7 @@ def config_list(help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
         raise typer.Exit()
     
     config_manager = ConfigManager()
-    configs = config_manager.list()
+    configs = config_manager.config_list(mask_api_key=not show_full_key)
     
     import json
     formatted_json = json.dumps(configs, indent=2, ensure_ascii=False)
@@ -183,7 +188,7 @@ def config_reset(help: bool = typer.Option(None, "--help", "-h", is_eager=True))
         raise typer.Exit()
     
     config_manager = ConfigManager()
-    config_manager.reset()
+    config_manager.config_reset()
     panel = Panel(
         "[bold yellow]配置已重置[/]",
         border_style="yellow",
@@ -210,13 +215,13 @@ def config_newpro(help: bool = typer.Option(None, "--help", "-h", is_eager=True)
         raise typer.Exit()
     
     config_manager = ConfigManager()
-    config_manager.newpro()
-    panel = Panel(
-        "[bold green]成功添加新的AI服务商配置[/]",
-        border_style="green",
-        padding=(1, 2)
-    )
-    console.print(panel)
+    if config_manager.config_newpro():
+        panel = Panel(
+            "[bold green]成功添加新的AI服务商配置[/]",
+            border_style="green",
+            padding=(0, 1)
+        )
+        console.print(panel)
 
 @config_app.command("remove", help="移除指定或全部模型配置")
 def config_remove(
@@ -244,7 +249,7 @@ def config_remove(
         raise typer.Exit()
     
     config_manager = ConfigManager()
-    config_manager.remove_provider(provider_name, all_flag)
+    config_manager.config_remove(provider_name, all_flag)
     panel = Panel(
         "[bold yellow]成功移除指定的模型配置[/]",
         border_style="yellow",
@@ -285,28 +290,121 @@ def select(
     console.print(panel)
 
 
-@app.command(help="智能提交，自动生成符合规范的Git提交信息")
-def push(help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
+@app.command(help="快速提交，一键完成add、commit和push操作")
+def quick_push(
+    remote: str = typer.Option("origin", "--remote", "-r", help="远程仓库名称"),
+    branch: str = typer.Option("", "--branch", "-b", help="分支名称，默认为当前分支"),
+    help: bool = typer.Option(None, "--help", "-h", is_eager=True)
+):
     if help:
         panel = Panel(
-            """[bold]命令:[/] git-ai push [options]
+            """[bold]命令:[/] git-ai quick-push [options]
 
 [bold]参数:[/]
+  -r, --remote TEXT     远程仓库名称，默认为origin
+  -b, --branch TEXT     分支名称，默认为当前分支
   -h, --help            显示帮助信息
 
 [bold]描述:[/]
-  自动化提交命令，生成符合规范的Git提交信息并执行提交
+  快速提交命令，交互式选择需要add的文件，自动生成commit信息，并在确认后push到远程仓库
 
 [bold]示例:[/]
-  git-ai push""",
-            title="[bold green]Git-AI[/] 智能提交",
+  git-ai quick-push
+  git-ai quick-push -r upstream -b develop""",
+            title="[bold green]Git-AI[/] 快速提交",
             border_style="green",
             padding=(1, 2)
         )
         console.print(panel)
         raise typer.Exit()
     
-    pass
+    config = ConfigManager()
+    if not config.get("current_provider"):
+        console.print("[bold red]错误：[/] 请先配置AI模型后再使用此功能")
+        raise typer.Exit(code=1)
+    
+    try:
+        generator = CommitGenerator(config)
+        
+        # 获取未暂存的文件
+        unstaged_files = generator.get_unstaged_files()
+        if not unstaged_files:
+            console.print("[bold yellow]警告：[/] 没有检测到未暂存的文件变更")
+            raise typer.Exit(code=1)
+        
+        # 显示未暂存文件列表
+        console.print("[bold]未暂存的文件：[/]")
+        for i, file in enumerate(unstaged_files, 1):
+            console.print(f"  {i}. {file}")
+        
+        # 交互式选择文件
+        from questionary import checkbox
+        selected_files = checkbox(
+            "请选择需要添加的文件（空格选择/取消，回车确认）：",
+            choices=unstaged_files
+        ).ask()
+        
+        if not selected_files:
+            console.print("[yellow]未选择任何文件，操作已取消[/]")
+            raise typer.Exit()
+        
+        # 执行git add
+        generator.execute_add(selected_files)
+        console.print(f"[bold green]已添加 {len(selected_files)} 个文件到暂存区[/]")
+        
+        # 获取暂存区差异并生成commit信息
+        diff_content = generator.get_staged_diff()
+        if not diff_content:
+            console.print("[bold yellow]警告：[/] 暂存区没有变更内容")
+            raise typer.Exit(code=1)
+        
+        # 生成commit信息
+        with Live(Spinner(name="dots", text="正在生成commit信息...")):
+            commit_msg = _generate_commit(generator, diff_content)
+        
+        # 预览commit信息
+        _preview_commit_msg(commit_msg)
+        
+        # 确认提交
+        choice = typer.prompt("请选择操作 p推送到远程/e编辑/r重新生成/q取消操作").lower()
+
+        if choice == 'p':
+            # 执行commit和push
+            generator.execute_commit(commit_msg)
+            console.print("[bold green]提交成功！[/]")
+            
+            # 执行push
+            with Live(Spinner(name="dots", text="正在推送到远程仓库...")):
+                generator.execute_push(remote, branch)
+            console.print(f"[bold green]成功推送到远程仓库 {remote}/{branch or '当前分支'}[/]")
+        elif choice == 'q':
+            console.print("[yellow]已取消提交[/]")
+        elif choice == 'e':
+            edited_msg = typer.edit(commit_msg)
+            if edited_msg:
+                generator.execute_commit(edited_msg)
+                console.print("[bold green]提交成功！[/]")
+                
+                # 询问是否推送
+                push_confirm = typer.confirm("是否推送到远程仓库？")
+                if push_confirm:
+                    with Live(Spinner(name="dots", text="正在推送到远程仓库...")):
+                        generator.execute_push(remote, branch)
+                    console.print(f"[bold green]成功推送到远程仓库 {remote}/{branch or '当前分支'}[/]")
+        elif choice == 'r':
+            # 重新生成（这里简化处理，实际应该循环）
+            console.print("[yellow]请重新运行命令以重新生成commit信息[/]")
+        else:
+            console.print("[red]无效选项，操作已取消[/]")
+    
+    except KeyboardInterrupt:
+        console.print("[yellow]\n操作已取消[/]")
+        return
+    except Exception as e:
+        console.print(f"[bold red]发生错误：[/] {str(e)}")
+        raise typer.Exit(code=1)
+
+
 
 def _generate_commit(generator, diff_content):
     """生成commit信息核心逻辑"""
@@ -398,8 +496,6 @@ def commit(
             else:
                 console.print("[red]无效选项，请重新选择[/]")
 
-    # except typer.Exit:
-        # raise
     except KeyboardInterrupt:
         console.print("[yellow]\n操作已取消[/]")
         return

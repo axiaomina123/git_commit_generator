@@ -1,6 +1,6 @@
 from git_commit_generator.config import ConfigManager
 import subprocess
-from typing import Optional
+from typing import Optional, List, Tuple
 from git_commit_generator.models.adapter import ModelAdapter
 
 class CommitGenerator:
@@ -59,3 +59,74 @@ class CommitGenerator:
             )
         except subprocess.CalledProcessError as e:
             raise RuntimeError("提交执行失败，请检查git状态")
+            
+    def get_unstaged_files(self) -> List[str]:
+        """获取未暂存的文件列表"""
+        try:
+            # 获取未跟踪的文件
+            untracked_result = subprocess.run(
+                ['git', 'ls-files', '--others', '--exclude-standard'],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+                check=True
+            )
+            
+            # 获取已修改但未暂存的文件
+            modified_result = subprocess.run(
+                ['git', 'diff', '--name-only'],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+                check=True
+            )
+            
+            # 合并文件列表并去重
+            files = []
+            if untracked_result.stdout:
+                files.extend(untracked_result.stdout.strip().split('\n'))
+            if modified_result.stdout:
+                files.extend(modified_result.stdout.strip().split('\n'))
+                
+            # 过滤空字符串并去重
+            return [f for f in files if f.strip()]
+        except subprocess.CalledProcessError as e:
+            return []
+    
+    def execute_add(self, files: List[str]) -> bool:
+        """执行git add命令添加指定文件"""
+        if not files:
+            return False
+            
+        try:
+            cmd = ['git', 'add'] + files
+            subprocess.run(cmd, check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"添加文件失败: {str(e)}")
+    
+    def execute_push(self, remote: str = 'origin', branch: str = '') -> bool:
+        """执行git push命令推送到远程仓库"""
+        try:
+            # 如果未指定分支，获取当前分支
+            if not branch:
+                branch_result = subprocess.run(
+                    ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore',
+                    check=True
+                )
+                branch = branch_result.stdout.strip()
+            
+            # 执行push命令
+            subprocess.run(
+                ['git', 'push', remote, branch],
+                check=True
+            )
+            return True
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"推送失败: {str(e)}")

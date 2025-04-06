@@ -5,7 +5,7 @@ import os
 import typer
 from questionary import confirm, select
 
-from .models.provider import BaseProvider
+from .models.provider import Provider
 
 
 
@@ -15,6 +15,12 @@ class ConfigManager:
         self.config_file = os.path.join(config_dir, '.config.json')
         # 自动创建配置目录
         os.makedirs(config_dir, exist_ok=True)
+        
+    def _mask_api_key(self, api_key: str) -> str:
+        """对API密钥进行掩码处理，只显示前4位和后4位"""
+        if not api_key or len(api_key) < 8:
+            return "****" if api_key else ""
+        return api_key[:4] + "*" * (len(api_key) - 8) + api_key[-4:]
 
     def _handle_file_operation(self, file_path: str, mode: str, success_handler: Callable, error_prefix: str):
         """文件操作统一处理"""
@@ -57,23 +63,48 @@ class ConfigManager:
         return validated_value
 
 
-    def get(self, key: str, provider_name: Union[str, None] = None):
+    def get(self, key: str, provider_name: Union[str, None] = None, mask_api_key: bool = True):
         """获取配置值
         :param provider_name: 指定模型提供商名称，为空时获取全局配置
+        :param mask_api_key: 是否对API密钥进行掩码处理
         """
         config = self._load_config()
+        value = ""
         if provider_name:
-            return config.get('providers', {}).get(provider_name, {}).get(key, 1024 if key == 'max_tokens' else "")
-        return config.get(key, 1024 if key == 'max_tokens' else "")
+            if key:
+                value = config.get('providers', {}).get(provider_name, {}).get(key, 1024 if key == 'max_tokens' else "")
+            else:
+                value = config.get('providers', {}).get(provider_name, {})
+        else:
+            value = config.get(key, '不存在的全局配置项')
+            
+        # 对API密钥进行掩码处理
+        if key == 'api_key' and mask_api_key and value:
+            return self._mask_api_key(value)
+        return value
     
 
-    def list(self):
-        """列出所有配置"""
+    def config_list(self, mask_api_key: bool = True):
+        """列出所有配置
+        :param mask_api_key: 是否对API密钥进行掩码处理
+        """
         self._config = self._load_config()
-        return self._config if self._config else {}
+        if not self._config:
+            return {}
+            
+        # 创建配置的副本，以便不修改原始配置
+        config_copy = json.loads(json.dumps(self._config))
+        
+        # 对API密钥进行掩码处理
+        if mask_api_key and 'providers' in config_copy:
+            for provider, provider_config in config_copy['providers'].items():
+                if 'api_key' in provider_config and provider_config['api_key']:
+                    provider_config['api_key'] = self._mask_api_key(provider_config['api_key'])
+        
+        return config_copy
         
 
-    def set(self, key: str, value: Union[str, int], provider_name: Union[str, None] = None):
+    def config_set(self, key: str, value: Union[str, int], provider_name: Union[str, None] = None):
         """设置配置值
         :param provider_name: 指定模型提供商名称
         """
@@ -112,9 +143,9 @@ class ConfigManager:
                 typer.echo(f"{zh_key}输入错误:{str(e)}，请重新输入")
         return value
 
-    def newpro(self):
+    def config_newpro(self):
         """新增模型配置"""
-        base_provider = BaseProvider()
+        base_provider = Provider()
         providers = base_provider.get_providers()
         choices = [
             {"name": f"{provider}", "value": provider}
@@ -129,7 +160,7 @@ class ConfigManager:
         ).ask()
         if not selected:
             typer.echo("未选择任何模型提供商")
-            return
+            return False
         # 用户选择手动输入时，需要手动输入模型提供商，模型URL和模型名称
         if selected == "manual":
             current_provider = self._retry_or_pass('current_provider', '模型提供商名称')
@@ -162,6 +193,7 @@ class ConfigManager:
         self._pending_config['current_provider'] = current_provider
         self._save_config(self._pending_config)
         typer.echo("模型配置已成功添加,并已切换到当前模型")
+        return True
 
     def select_model(self):
         """
@@ -197,7 +229,7 @@ class ConfigManager:
             # 用户强制退出时不做任何操作
             return None
 
-    def remove_provider(self, provider_name: Union[str, None] = None, all_flag: bool = False):
+    def config_remove(self, provider_name: Union[str, None] = None, all_flag: bool = False):
         """移除指定或全部模型配置"""
         
         self._config = self._load_config()
@@ -242,7 +274,7 @@ class ConfigManager:
         self._save_config(self._config)
         typer.echo(f"已成功移除 {provider_name} 的配置")
 
-    def reset(self):
+    def config_reset(self):
         """重置配置"""
         try:
             if os.path.exists(self.config_file):

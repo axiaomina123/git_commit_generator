@@ -64,6 +64,13 @@ class Provider:
         
         if self.provider_type == "AzureProvider":
             headers["api-key"] = self.api_key
+        elif self.current_provider == "Baidu":
+            # 百度文心一言API需要在URL中添加access_token参数，不需要在header中添加
+            pass
+        elif self.current_provider == "Anthropic":
+            # Anthropic使用x-api-key而不是Bearer认证
+            headers["x-api-key"] = self.api_key
+            headers["anthropic-version"] = "2023-06-01"  # 添加API版本
         else:  # 大多数API使用Bearer认证
             headers["Authorization"] = f"Bearer {self.api_key}"
             
@@ -85,27 +92,11 @@ class Provider:
                     "parts": [{"text": prompt}]
                 }]
             }
-        elif self.provider_type == "ChatGLMProvider":
+        elif self.current_provider == "Baidu":
             return {
-                "model": self.model_name,
-                "prompt": [{"role": "user", "content": prompt}],
+                "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7,
-                "max_tokens": self.max_tokens
-            }
-        elif self.provider_type in ["DeepseekProvider", "OtherProvider"]:
-            return {
-                "model": self.model_name,
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ],
-                "stream": False,
-                "max_tokens": self.max_tokens,
-                "stop": None,
-                "temperature": 0.7,
-                "top_p": 0.7,
-                "top_k": 50,
-                "frequency_penalty": 0.5,
-                "n": 1
+                "top_p": 0.8
             }
         else:  # OpenAI和Azure等使用类似格式
             return {
@@ -119,6 +110,11 @@ class Provider:
         """根据不同提供商准备请求URL"""
         if self.provider_type == "AzureProvider":
             return f"{self.model_url}?api-version=2023-05-15"
+        elif self.current_provider == "Baidu":
+            # 百度文心一言API需要在URL中添加access_token参数
+            # 实际使用时，需要通过API获取access_token
+            # 这里假设api_key就是access_token
+            return f"{self.model_url}?access_token={self.api_key}"
         return self.model_url
     
     def _parse_response(self, response_json: Dict[str, Any]) -> str:
@@ -127,6 +123,12 @@ class Provider:
             return response_json['generated_text'].strip()
         elif self.provider_type == "GoogleProvider":
             return response_json['candidates'][0]['content']['parts'][0]['text'].strip()
+        elif self.current_provider == "Anthropic":
+            return response_json['content'][0]['text'].strip()
+        elif self.current_provider == "Baidu":
+            return response_json['result'].strip()
+        elif self.current_provider == "Moonshot":
+            return response_json['choices'][0]['message']['content'].strip()
         else:  # OpenAI, Azure, DeepSeek, ChatGLM等使用类似格式
             return response_json['choices'][0]['message']['content'].strip()
     
@@ -139,8 +141,12 @@ class Provider:
             "DeepseekProvider": "DeepSeek API请求失败",
             "GoogleProvider": "Google API请求失败",
             "ChatGLMProvider": "ChatGLM API请求失败",
+            "AnthropicProvider": "Anthropic Claude API请求失败",
+            "BaiduProvider": "百度文心一言 API请求失败",
+            "MoonshotProvider": "Moonshot API请求失败",
             "OtherProvider": "API请求失败"
         }
+            
         return provider_error_messages.get(self.provider_type, "API请求失败")
 
     def generate(self, prompt: str) -> str:
@@ -150,60 +156,14 @@ class Provider:
         url = self._prepare_url()
         
         try:
-            # 对于DeepSeek等可能需要调试的提供商，保留调试信息
-            if self.provider_type in ["DeepseekProvider", "OtherProvider"]:
-                print(self.model_name, url)
+            # 需要调试的提供商，保留调试信息
+            print(self.model_name, url)
                 
             response = api.post(url, headers=headers, json=data)
             response.raise_for_status()
             return self._parse_response(response.json())
         except Exception as e:
             error_message = self._get_error_message()
+            
             raise Exception(f"{error_message}: {str(e)}")
 
-# 为了向后兼容，保留原有类名
-class BaseProvider(Provider):
-    """为了向后兼容而保留的基类"""
-    pass
-
-class OpenaiProvider(Provider):
-    """为了向后兼容而保留的OpenAI提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "OpenaiProvider"
-
-class AzureProvider(Provider):
-    """为了向后兼容而保留的Azure提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "AzureProvider"
-
-class HuggingFaceProvider(Provider):
-    """为了向后兼容而保留的HuggingFace提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "HuggingFaceProvider"
-
-class DeepseekProvider(Provider):
-    """为了向后兼容而保留的DeepSeek提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "DeepseekProvider"
-
-class GoogleProvider(Provider):
-    """为了向后兼容而保留的Google提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "GoogleProvider"
-
-class ChatGLMProvider(Provider):
-    """为了向后兼容而保留的ChatGLM提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "ChatGLMProvider"
-
-class OtherProvider(Provider):
-    """为了向后兼容而保留的其他提供商类"""
-    def __init__(self):
-        super().__init__()
-        self.provider_type = "OtherProvider"
