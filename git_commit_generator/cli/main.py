@@ -326,6 +326,31 @@ def quick_push(
     try:
         generator = CommitGenerator(config)
         
+        # 检查是否存在冲突
+        has_conflicts, conflict_files, conflict_blocks = generator.check_conflicts()
+        if has_conflicts:
+            console.print("[bold red]错误：[/] 检测到Git冲突，请先解决以下冲突后再执行操作")
+            console.print("\n[bold]冲突文件列表：[/]")
+            for i, file in enumerate(conflict_files, 1):
+                console.print(f"  {i}. {file}")
+            
+            # 显示冲突代码块
+            if conflict_blocks:
+                console.print("\n[bold]冲突代码块：[/]")
+                for file, blocks in conflict_blocks.items():
+                    console.print(f"\n[bold]文件：[/] {file}")
+                    for i, block in enumerate(blocks, 1):
+                        panel = Panel(
+                            block,
+                            title=f"冲突 #{i}",
+                            border_style="red",
+                            padding=(1, 2)
+                        )
+                        console.print(panel)
+            
+            console.print("\n[bold yellow]提示：[/] 请解决冲突后再执行此命令")
+            raise typer.Exit(code=1)
+        
         # 获取未暂存的文件
         unstaged_files = generator.get_unstaged_files()
         if not unstaged_files:
@@ -378,7 +403,9 @@ def quick_push(
                 generator.execute_push(remote, branch)
             console.print(f"[bold green]成功推送到远程仓库 {remote}/{branch or '当前分支'}[/]")
         elif choice == 'q':
-            console.print("[yellow]已取消提交[/]")
+            # 撤销暂存区的更改
+            generator.execute_reset()
+            console.print("[yellow]已取消提交，所有操作均已取消[/]")
         elif choice == 'e':
             edited_msg = typer.edit(commit_msg)
             if edited_msg:
@@ -403,8 +430,6 @@ def quick_push(
     except Exception as e:
         console.print(f"[bold red]发生错误：[/] {str(e)}")
         raise typer.Exit(code=1)
-
-
 
 def _generate_commit(generator, diff_content):
     """生成commit信息核心逻辑"""
@@ -461,6 +486,32 @@ def commit(
 
     try:
         generator = CommitGenerator(config)
+        
+        # 检查是否存在冲突
+        has_conflicts, conflict_files, conflict_blocks = generator.check_conflicts()
+        if has_conflicts:
+            console.print("[bold red]错误：[/] 检测到Git冲突，请先解决以下冲突后再执行操作")
+            console.print("\n[bold]冲突文件列表：[/]")
+            for i, file in enumerate(conflict_files, 1):
+                console.print(f"  {i}. {file}")
+            
+            # 显示冲突代码块
+            if conflict_blocks:
+                console.print("\n[bold]冲突代码块：[/]")
+                for file, blocks in conflict_blocks.items():
+                    console.print(f"\n[bold]文件：[/] {file}")
+                    for i, block in enumerate(blocks, 1):
+                        panel = Panel(
+                            block,
+                            title=f"冲突 #{i}",
+                            border_style="red",
+                            padding=(1, 2)
+                        )
+                        console.print(panel)
+            
+            console.print("\n[bold yellow]提示：[/] 请解决冲突后再执行此命令")
+            raise typer.Exit(code=1)
+            
         diff_content = generator.get_staged_diff()
         
         if not diff_content:

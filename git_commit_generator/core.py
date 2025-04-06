@@ -1,6 +1,7 @@
 from git_commit_generator.config import ConfigManager
 import subprocess
-from typing import Optional, List, Tuple
+import re
+from typing import Optional, List, Tuple, Dict
 from git_commit_generator.models.adapter import ModelAdapter
 
 class CommitGenerator:
@@ -130,3 +131,81 @@ class CommitGenerator:
             return True
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"推送失败: {str(e)}")
+            
+    def execute_reset(self) -> bool:
+        """执行git reset命令撤销暂存区的更改"""
+        try:
+            subprocess.run(
+                ['git', 'reset'],
+                check=True
+            )
+            return True
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"撤销暂存区失败: {str(e)}")
+            
+    def check_conflicts(self) -> Tuple[bool, List[str], Dict[str, List[str]]]:
+        """检测仓库中是否存在冲突文件，并返回冲突文件列表和冲突内容
+        
+        Returns:
+            Tuple[bool, List[str], Dict[str, List[str]]]: 
+                - 是否存在冲突
+                - 冲突文件列表
+                - 冲突文件及其冲突代码块的字典
+        """
+        try:
+            # 检查是否存在未合并的文件（冲突文件）
+            result = subprocess.run(
+                ['git', 'ls-files', '--unmerged'],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+                check=True
+            )
+            
+            if not result.stdout.strip():
+                return False, [], {}
+            
+            # 提取冲突文件列表
+            conflict_files = set()
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    # 格式: <mode> <object> <stage> <file>
+                    parts = line.strip().split()
+                    if len(parts) >= 4:
+                        conflict_files.add(parts[3])
+            
+            conflict_files = list(conflict_files)
+            
+            # 获取每个冲突文件的冲突内容
+            conflict_blocks = {}
+            for file in conflict_files:
+                try:
+                    # 读取文件内容
+                    with open(file, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    
+                    # 提取冲突代码块
+                    conflict_pattern = r'<<<<<<< .*?\n(.*?)=======\n(.*?)>>>>>>> .*?\n'
+                    matches = re.finditer(conflict_pattern, content, re.DOTALL)
+                    
+                    blocks = []
+                    for match in matches:
+                        # 提取冲突的两部分内容
+                        ours = match.group(1).strip()
+                        theirs = match.group(2).strip()
+                        blocks.append(f"<<<<<<< HEAD\n{ours}\n=======\n{theirs}\n>>>>>>> BRANCH")
+                    
+                    if blocks:
+                        conflict_blocks[file] = blocks
+                except Exception as e:
+                    # 如果读取文件失败，至少记录文件名
+                    conflict_blocks[file] = [f"无法读取冲突内容: {str(e)}"]
+            
+            return True, conflict_files, conflict_blocks
+        except subprocess.CalledProcessError as e:
+            # 如果git命令执行失败，假设没有冲突
+            return False, [], {}
+        except Exception as e:
+            # 其他异常情况，假设没有冲突
+            return False, [], {}
