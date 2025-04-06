@@ -1,7 +1,9 @@
-from typing import Callable
+from typing import Callable, Union
 import json
 import os
+
 import typer
+from questionary import confirm, select
 
 from .models.provider import BaseProvider
 
@@ -40,7 +42,7 @@ class ConfigManager:
             error_prefix='保存配置'
         )
 
-    def _validate_input(self, key: str, value: str | int):
+    def _validate_input(self, key: str, value: Union[str, int]):
         """
         统一输入验证逻辑
         :param key: 配置项名称       
@@ -55,7 +57,7 @@ class ConfigManager:
         return validated_value
 
 
-    def get(self, key: str, provider_name: str | None = None):
+    def get(self, key: str, provider_name: Union[str, None] = None):
         """获取配置值
         :param provider_name: 指定模型提供商名称，为空时获取全局配置
         """
@@ -71,7 +73,7 @@ class ConfigManager:
         return self._config if self._config else {}
         
 
-    def set(self, key: str, value: str | int, provider_name: str | None = None):
+    def set(self, key: str, value: Union[str, int], provider_name: Union[str, None] = None):
         """设置配置值
         :param provider_name: 指定模型提供商名称
         """
@@ -112,7 +114,6 @@ class ConfigManager:
 
     def newpro(self):
         """新增模型配置"""
-        from questionary import select
         base_provider = BaseProvider()
         providers = base_provider.get_providers()
         choices = [
@@ -162,23 +163,16 @@ class ConfigManager:
         self._save_config(self._pending_config)
         typer.echo("模型配置已成功添加,并已切换到当前模型")
 
-    def select_model(self, provider_name: str | None = None):
+    def select_model(self):
         """
         交互式选择当前使用模型
         """
-        from questionary import select
-        self._config = self._load_config()
+        try:
+            self._config = self._load_config()
 
-        if not self._config.get('providers'):
-            raise typer.Abort("当前没有可用的模型配置，请先使用 newpro 命令添加")
+            if not self._config.get('providers'):
+                raise typer.Abort("当前没有可用的模型配置，请先使用 newpro 命令添加")
 
-        if provider_name:
-            if provider_name not in self._config['providers']:
-                raise typer.Abort(f"提供商 {provider_name} 不存在")
-            self._config['current_provider'] = provider_name
-            self._save_config(self._config)
-            typer.echo(f"已切换到模型提供商：{provider_name}")
-        else:
             providers = list(self._config['providers'].keys())
             choices = [
                 {"name": f"{p}（当前使用）", "value": p}
@@ -190,18 +184,22 @@ class ConfigManager:
             selected = select(
                 "请选择要使用的模型提供商：",
                 choices=choices,
-                use_arrow_keys=True
             ).ask()
+            if not selected:
+                return None
 
             provider = selected
 
             self._config['current_provider'] = provider
             self._save_config(self._config)
-            typer.echo(f"已切换到模型提供商：{provider}")
+            return provider
+        except KeyboardInterrupt:
+            # 用户强制退出时不做任何操作
+            return None
 
-    def remove_provider(self, provider_name: str | None = None, all_flag: bool = False):
+    def remove_provider(self, provider_name: Union[str, None] = None, all_flag: bool = False):
         """移除指定或全部模型配置"""
-        from questionary import confirm
+        
         self._config = self._load_config()
 
         if not self._config.get('providers'):

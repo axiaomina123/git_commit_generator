@@ -3,28 +3,24 @@
         "provider": "ChatGLMProvider",
         "model_name": "ChatGLM",
         "model_url": "https://open.bigmodel.cn/api/paas/v3",
-        "api_key": "sk-eovsrpjgrvhotcxcjshjtzmpzqshcqxzgtfreskqpwszitmd",
         "max_tokens": 1024
     },
     "DeepSeek": {
         "provider": "DeepseekProvider",
         "model_name": "DeepSeek",
         "model_url": "https://api.deepseek.com/v1",
-        "api_key": "sk-eovsrpjgrvhotcxcjshjtzmpzqshcqxzgtfreskqpwszitmd",
         "max_tokens": 1024
     },
     "HuggingFace": {
         "provider": "HuggingFaceProvider",
         "model_name": "HuggingFace",
         "model_url": "https://mirror.huggingface.cn",
-        "api_key": "sk-eovsrpjgrvhotcxcjshjtzmpzqshcqxzgtfreskqpwszitmd",
         "max_tokens": 1024
     },
     "Google": {
         "provider": "GoogleProvider",
         "model_name": "Gemma",
         "model_url": "https://huggingface.co/google",
-        "api_key": "sk-eovsrpjgrvhotcxcjshjtzmpzqshcqxzgtfreskqpwszitmd",
         "max_tokens": 1024
     }
 }
