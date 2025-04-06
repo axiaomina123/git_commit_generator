@@ -10,3 +10,7 @@ dependencies = [
 
 [project.scripts]
 git-ai = "git_commit_generator.cli.main:app"
+
+[tool.setuptools]
+packages = ["git_commit_generator"]
+package-dir = {"" = "."}
