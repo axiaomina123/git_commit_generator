@@ -8,6 +8,139 @@ class UIUtils:
     """UI工具类，用于处理界面展示相关的功能"""
     
     console = Console()
+    
+    @classmethod
+    def get_help_content(cls, command_name: str) -> str:
+        """获取命令的帮助信息
+        
+        Args:
+            command_name: 命令名称
+            
+        Returns:
+            格式化后的帮助信息
+        """
+        help_contents = {
+            "main": """   一个基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息。
+
+  [bold]可用命令:[/]
+  [bold]commit[/]    - 智能生成并提交Git commit信息
+  [bold]quick-push[/] - 快速完成add、commit和push操作
+  [bold]config[/]    - 配置管理系统
+
+使用 [bold]git-ai COMMAND --help[/] 查看命令详细用法""",
+            
+            "config": """[bold]可用命令:[/]
+  [bold]set[/]     - 设置指定配置项的值
+  [bold]get[/]     - 查询指定配置项的当前值
+  [bold]list[/]    - 显示所有已存储的配置项
+  [bold]reset[/]   - 清除所有配置项
+  [bold]newpro[/]  - 交互式添加新的AI服务商配置
+  [bold]remove[/]  - 移除指定或全部模型配置
+  [bold]select[/]  - 选择当前使用的AI模型
+
+使用 [bold]git-ai config COMMAND --help[/] 查看命令详细用法""",
+            
+            "config_set": """[bold]命令:[/] git-ai config set <key> <value> [options]
+
+[bold]参数:[/]
+  <key>                  配置项名称
+  <value>                配置项值
+  -p, --provider TEXT   服务商名称(如: openai/anthropic)
+  -h, --help            显示帮助信息
+
+[bold]示例:[/]
+  git-ai config set api_key sk-123 -p openai
+  git-ai config set max_tokens 2000 -p anthropic""",
+            
+            "config_get": """[bold]命令:[/] git-ai config get <key> [options]
+
+[bold]参数:[/]
+  <key>                 配置项名称
+  -p, --provider        服务商名称(显示当前使用的服务商信息) 
+  -f, --show-full-key   显示完整的API密钥（仅当key为api_key时有效）
+  -h, --help            显示帮助信息
+
+[bold]示例:[/]
+  git-ai config get current_provider
+  git-ai config get max_tokens -p anthropic""",
+            
+            "config_list": """[bold]命令:[/] git-ai config list
+
+[bold]参数:[/]
+  -f, --show-full-key   显示完整的API密钥（默认为掩码显示）
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  显示所有已存储的配置项，包括全局配置和各服务商配置""",
+            
+            "config_reset": """[bold]命令:[/] git-ai config reset
+
+[bold]参数:[/]
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  清除所有配置项，包括全局配置和各服务商配置（不可恢复操作）""",
+            
+            "config_newpro": """[bold]命令:[/] git-ai config newpro
+
+[bold]参数:[/]
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  交互式添加新的AI服务商配置，包括服务商名称、API密钥等信息""",
+            
+            "config_remove": """[bold]命令:[/] git-ai config remove [options]
+
+[bold]参数:[/]
+  -p, --provider TEXT   指定要移除的服务商名称
+  -a, --all             移除所有模型配置
+  -h, --help            显示帮助信息
+
+[bold]示例:[/]
+  git-ai config remove -p openai
+  git-ai config remove --all""",
+            
+            "select": """[bold]命令:[/] git-ai config select [options]
+
+[bold]参数:[/]
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  选择当前使用的AI模型，设置为默认服务商""",
+            
+            "quick_push": """[bold]命令:[/] git-ai quick-push [options]
+
+[bold]参数:[/]
+  -r, --remote TEXT     远程仓库名称，默认为origin
+  -b, --branch TEXT     分支名称，默认为当前分支
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  快速提交命令，检测git状态并智能处理：
+  - 检查是否存在冲突，如有则显示冲突文件和代码块
+  - 检查暂存区文件状态，提供继续add、执行commit或退出选项
+  - 交互式选择需要add的文件
+  - 显示未推送的commit列表，执行push操作
+
+[bold]示例:[/]
+  git-ai quick-push
+  git-ai quick-push -r upstream -b develop""",
+            
+            "commit": """[bold]命令:[/] git-ai commit [options]
+
+[bold]参数:[/]
+  -t, --preview         预览生成的commit信息而不直接提交
+  -h, --help            显示帮助信息
+
+[bold]描述:[/]
+  智能生成并提交Git commit信息，支持预览、编辑和重新生成
+
+[bold]示例:[/]
+  git-ai commit
+  git-ai commit --preview"""
+        }
+        
+        return help_contents.get(command_name, "")
 
     @classmethod
     def show_multi_select(cls, prompt: str, choices: list) -> list:
@@ -25,7 +158,7 @@ class UIUtils:
         return selected
     
     @classmethod
-    def show_panel(cls, content: str, title: str, style: str = "green", padding: tuple = (1, 2)):
+    def show_panel(cls, content: str, title: str = '', style: str = "green", padding: tuple = (1, 2)):
         """显示面板
         
         Args:
@@ -36,7 +169,7 @@ class UIUtils:
         """
         panel = Panel(
             content,
-            title=title,
+            title=f'[bold {style}]Git-AI[/] {title}' if not title.startswith('[bold') else title,
             border_style=style,
             padding=padding
         )
@@ -76,17 +209,13 @@ class UIUtils:
         Args:
             files: 已暂存文件列表
         """
-        cls.console.print("[bold]已暂存的文件：[/]")
-        for i, file in enumerate(files, 1):
-            cls.console.print(f"  {i}. {file}")
-
         content = "\n".join([
             f"  {i}. {file}"
             for i, file in enumerate(files, 1)
         ])
         cls.show_panel(
             content,
-            f"[bold yellow]已暂存的文件 ({len(files)}个)[/]",
+            f"已暂存的文件 ({len(files)}个)",
             "yellow",
             (1, 2)
         )
