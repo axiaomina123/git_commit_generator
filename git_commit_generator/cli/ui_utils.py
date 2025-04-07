@@ -8,6 +8,21 @@ class UIUtils:
     """UI工具类，用于处理界面展示相关的功能"""
     
     console = Console()
+
+    @classmethod
+    def show_multi_select(cls, prompt: str, choices: list) -> list:
+        """显示多选组件"""
+        from questionary import checkbox
+        selected = checkbox(
+            prompt,
+            choices=[
+                {
+                    "name": f"{commit['author']} {commit['commit_id'][:6]} {commit['message']} ({commit['date']})",
+                    "value": commit['commit_id']
+                } for commit in choices
+            ]
+        ).ask()
+        return selected
     
     @classmethod
     def show_panel(cls, content: str, title: str, style: str = "green", padding: tuple = (1, 2)):
