@@ -1,12 +1,16 @@
+import re
 import click
 import typer
-from ..config import ConfigManager
-from ..core import CommitGenerator
+from rich.panel import Panel
 from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
-from rich.panel import Panel
-
+from typer.rich_utils import _RICH_HELP_PANEL_NAME
+from ..config import ConfigManager
+from ..core import CommitGenerator
+from git_commit_generator.git_operations import GitOperations
+from .file_selector import FileSelector
+from .ui_utils import UIUtils
 
 app = typer.Typer()
 config_app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
@@ -19,30 +23,23 @@ app.add_typer(
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context, 
 help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
-    panel = Panel(     
-  """   一个基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息。
+    content = """   一个基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息。
 
   [bold]可用命令:[/]
   [bold]commit[/]    - 智能生成并提交Git commit信息
   [bold]quick-push[/] - 快速完成add、commit和push操作
   [bold]config[/]    - 配置管理系统
 
-使用 [bold]git-ai COMMAND --help[/] 查看命令详细用法""",
-        title="[bold green]Git-AI[/] 智能提交工具 🚀",
-        border_style="green",
-        padding=(1, 2)
-    )
-    if help:
-        console.print(panel)
-        raise typer.Exit()
-    if ctx.invoked_subcommand is None:
-        console.print(panel)
+使用 [bold]git-ai COMMAND --help[/] 查看命令详细用法"""
+    if help or ctx.invoked_subcommand is None:
+        UIUtils.show_panel(content, "[bold green]Git-AI[/] 智能提交工具 🚀")
+        if help:
+            raise typer.Exit()
 
 @config_app.callback(invoke_without_command=True)
 def config_callback(ctx: typer.Context, 
 help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
-    panel = Panel(
-        """[bold]可用命令:[/]
+    content = """[bold]可用命令:[/]
   [bold]set[/]     - 设置指定配置项的值
   [bold]get[/]     - 查询指定配置项的当前值
   [bold]list[/]    - 显示所有已存储的配置项
@@ -51,16 +48,11 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
   [bold]remove[/]  - 移除指定或全部模型配置
   [bold]select[/]  - 选择当前使用的AI模型
 
-使用 [bold]git-ai config COMMAND --help[/] 查看命令详细用法""",
-        title="[bold green]Git-AI[/] 配置管理系统 🔧",
-        border_style="green",
-        padding=(1, 2)
-    )
-    if help:
-        console.print(panel)
-        raise typer.Exit()
-    if ctx.invoked_subcommand is None:
-        console.print(panel)
+使用 [bold]git-ai config COMMAND --help[/] 查看命令详细用法"""
+    if help or ctx.invoked_subcommand is None:
+        UIUtils.show_panel(content, "[bold green]Git-AI[/] 配置管理系统 🔧")
+        if help:
+            raise typer.Exit()
 
 
 @config_app.command("set", help="设置指定配置项的值")
@@ -83,7 +75,7 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     # 检查必需参数
@@ -98,7 +90,7 @@ help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
         border_style="green",
         padding=(0, 1)
     )
-    console.print(panel)
+    Console().print(panel)
 
 @config_app.command("get", help="查询指定配置项的当前值")
 def config_get(key: str = typer.Argument(None), 
@@ -122,7 +114,7 @@ def config_get(key: str = typer.Argument(None),
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -132,7 +124,7 @@ def config_get(key: str = typer.Argument(None),
         border_style="green",
         padding=(0, 1)
     )
-    console.print(panel)
+    Console().print(panel)
 
 @config_app.command("list", help="显示所有已存储的配置项")
 def config_list(show_full_key: bool = typer.Option(False, "--show-full-key", "-f", help="显示完整的API密钥"),
@@ -151,7 +143,7 @@ def config_list(show_full_key: bool = typer.Option(False, "--show-full-key", "-f
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -183,7 +175,7 @@ def config_reset(help: bool = typer.Option(None, "--help", "-h", is_eager=True))
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -193,7 +185,7 @@ def config_reset(help: bool = typer.Option(None, "--help", "-h", is_eager=True))
         border_style="yellow",
         padding=(1, 2)
     )
-    console.print(panel)
+    Console().print(panel)
 
 @config_app.command("newpro", help="交互式添加新的AI服务商配置")
 def config_newpro(help: bool = typer.Option(None, "--help", "-h", is_eager=True)):
@@ -210,7 +202,7 @@ def config_newpro(help: bool = typer.Option(None, "--help", "-h", is_eager=True)
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -220,7 +212,7 @@ def config_newpro(help: bool = typer.Option(None, "--help", "-h", is_eager=True)
             border_style="green",
             padding=(0, 1)
         )
-        console.print(panel)
+        Console().print(panel)
 
 @config_app.command("remove", help="移除指定或全部模型配置")
 def config_remove(
@@ -244,7 +236,7 @@ def config_remove(
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -254,7 +246,7 @@ def config_remove(
         border_style="yellow",
         padding=(1, 2)
     )
-    console.print(panel)
+    Console().print(panel)
 
 @config_app.command(help="选择当前使用的AI模型")
 def select(
@@ -274,7 +266,7 @@ def select(
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config_manager = ConfigManager()
@@ -286,7 +278,7 @@ def select(
         border_style="green",
         padding=(0, 1) 
     )
-    console.print(panel)
+    Console().print(panel)
 
 
 @app.command(help="快速提交，一键完成add、commit和push操作")
@@ -305,7 +297,11 @@ def quick_push(
   -h, --help            显示帮助信息
 
 [bold]描述:[/]
-  快速提交命令，交互式选择需要add的文件，自动生成commit信息，并在确认后push到远程仓库
+  快速提交命令，检测git状态并智能处理：
+  - 检查是否存在冲突，如有则显示冲突文件和代码块
+  - 检查暂存区文件状态，提供继续add、执行commit或退出选项
+  - 交互式选择需要add的文件
+  - 显示未推送的commit列表，执行push操作
 
 [bold]示例:[/]
   git-ai quick-push
@@ -314,128 +310,179 @@ def quick_push(
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
-    config = ConfigManager()
-    if not config.get("current_provider"):
-        console.print("[bold red]错误：[/] 请先配置AI模型后再使用此功能")
-        raise typer.Exit(code=1)
-    
     try:
-        generator = CommitGenerator(config)
+        generator = CommitGenerator(ConfigManager())
+        git_op = GitOperations()
         
         # 检查是否存在冲突
         has_conflicts, conflict_files, conflict_blocks = generator.check_conflicts()
         if has_conflicts:
-            console.print("[bold red]错误：[/] 检测到Git冲突，请先解决以下冲突后再执行操作")
-            console.print("\n[bold]冲突文件列表：[/]")
-            for i, file in enumerate(conflict_files, 1):
-                console.print(f"  {i}. {file}")
-            
-            # 显示冲突代码块
-            if conflict_blocks:
-                console.print("\n[bold]冲突代码块：[/]")
-                for file, blocks in conflict_blocks.items():
-                    console.print(f"\n[bold]文件：[/] {file}")
-                    for i, block in enumerate(blocks, 1):
-                        panel = Panel(
-                            block,
-                            title=f"冲突 #{i}",
-                            border_style="red",
-                            padding=(1, 2)
-                        )
-                        console.print(panel)
-            
-            console.print("\n[bold yellow]提示：[/] 请解决冲突后再执行此命令")
+            UIUtils.show_conflicts(conflict_files, conflict_blocks)
             raise typer.Exit(code=1)
         
-        # 获取未暂存的文件
-        unstaged_files = generator.get_unstaged_files()
-        if not unstaged_files:
-            console.print("[bold yellow]警告：[/] 没有检测到未暂存的文件变更")
-            raise typer.Exit(code=1)
+        # 检查暂存区状态
+        staged_files = git_op.get_staged_files()
+        if staged_files:
+            UIUtils.show_staged_files(staged_files)
+            from questionary import select
+            choice = select(
+                "检测到暂存区有未commit的文件，请选择操作：",
+                choices=[
+                    {"name": "1. 继续add", "value": "1"},
+                    {"name": "2. 执行commit", "value": "2"},
+                    {"name": "3. 退出", "value": "3"}
+                ]
+            ).ask()
         
-        # 显示未暂存文件列表
-        console.print("[bold]未暂存的文件：[/]")
-        for i, file in enumerate(unstaged_files, 1):
-            console.print(f"  {i}. {file}")
-        
-        # 交互式选择文件
-        from questionary import checkbox
-        selected_files = checkbox(
-            "请选择需要添加的文件（空格选择/取消，回车确认）：",
-            choices=unstaged_files
-        ).ask()
-        
-        if not selected_files:
-            console.print("[yellow]未选择任何文件，操作已取消[/]")
-            raise typer.Exit()
-        
-        # 执行git add
-        generator.execute_add(selected_files)
-        console.print(f"[bold green]已添加 {len(selected_files)} 个文件到暂存区[/]")
-        
-        # 获取暂存区差异并生成commit信息
-        diff_content = generator.get_staged_diff()
-        if not diff_content:
-            console.print("[bold yellow]警告：[/] 暂存区没有变更内容")
-            raise typer.Exit(code=1)
-        
-        # 生成commit信息
-        with Live(Spinner(name="dots", text="正在生成commit信息...")):
-            commit_msg = _generate_commit(generator, diff_content)
-        
-        # 预览commit信息
-        _preview_commit_msg(commit_msg)
-        
-        # 确认提交
-        choice = typer.prompt("请选择操作 p推送到远程/e编辑/r重新生成/q取消操作").lower()
-
-        if choice == 'p':
-            # 执行commit和push
-            generator.execute_commit(commit_msg)
-            console.print("[bold green]提交成功！[/]")
-            
-            # 执行push
-            with Live(Spinner(name="dots", text="正在推送到远程仓库...")):
-                generator.execute_push(remote, branch)
-            console.print(f"[bold green]成功推送到远程仓库 {remote}/{branch or '当前分支'}[/]")
-        elif choice == 'q':
-            # 撤销暂存区的更改
-            generator.execute_reset()
-            console.print("[yellow]已取消提交，所有操作均已取消[/]")
-        elif choice == 'e':
-            edited_msg = typer.edit(commit_msg)
-            if edited_msg:
-                generator.execute_commit(edited_msg)
-                console.print("[bold green]提交成功！[/]")
-                
-                # 询问是否推送
-                push_confirm = typer.confirm("是否推送到远程仓库？")
-                if push_confirm:
-                    with Live(Spinner(name="dots", text="正在推送到远程仓库...")):
-                        generator.execute_push(remote, branch)
-                    console.print(f"[bold green]成功推送到远程仓库 {remote}/{branch or '当前分支'}[/]")
-        elif choice == 'r':
-            # 重新生成（这里简化处理，实际应该循环）
-            console.print("[yellow]请重新运行命令以重新生成commit信息[/]")
+            if choice == "1":
+                # 处理未暂存的文件
+                unstaged_files = git_op.get_unstaged_files()
+                if unstaged_files:
+                    # file_selector = FileSelector()
+                    # file_tree = file_selector.build_file_tree(unstaged_files)
+                    # file_map, choices = file_selector.flatten_tree(file_tree)
+                    from questionary import checkbox
+                    selected = checkbox(
+                        "请选择要add的文件：",
+                        choices=unstaged_files
+                    ).ask()
+                    # selected = file_selector.on_checkbox_select(selected, file_map)
+                    
+                    if selected:
+                        git_op.execute_add(selected)
+                        UIUtils.show_success("文件已添加到暂存区")
+                        # 生成并执行commit
+                        diff_content = git_op.get_staged_diff()
+                        with UIUtils.show_spinner():
+                            commit_msg = _generate_commit(generator, diff_content)
+                        UIUtils.show_commit_preview(commit_msg)
+                        if typer.confirm("确认提交？"):
+                            generator.execute_commit(commit_msg)
+                            UIUtils.show_success("提交成功！")
+                        else:
+                            UIUtils.show_warning("\n操作已取消")
+                            return
+                    else:
+                        UIUtils.show_warning("\n未选择任何文件，已跳过add操作")
+                else:
+                    UIUtils.show_warning("没有未暂存的文件，已跳过add操作")
+                    
+            elif choice == "2":
+                diff_content = git_op.get_staged_diff()
+                while True:
+                    with Live(Spinner(name="dots", text="正在生成commit信息...")):
+                        commit_msg = _generate_commit(generator, diff_content)
+                    UIUtils.show_commit_preview(commit_msg)
+                    try:
+                        choice = typer.prompt("请选择操作 [u]使用/q退出/e编辑/r重新生成").lower()
+                    except click.Abort:
+                        raise KeyboardInterrupt
+                    
+                    if choice == 'u':
+                        generator.execute_commit(commit_msg)
+                        UIUtils.show_success("\n提交成功！")
+                        break
+                    elif choice == 'q':
+                        UIUtils.show_warning("\n已取消提交")
+                        break
+                    elif choice == 'e':
+                        edited_msg = typer.edit(commit_msg)
+                        if edited_msg:
+                            generator.execute_commit(edited_msg)
+                            UIUtils.show_success("\n提交成功！")
+                            break
+                    elif choice == 'r':
+                        continue
+                    else:
+                        UIUtils.show_error("\n无效的选择，请重新输入")
+            else:
+                UIUtils.show_warning("\n操作已取消")
+                return
         else:
-            console.print("[red]无效选项，操作已取消[/]")
+            # 处理未暂存的文件
+            unstaged_files = git_op.get_unstaged_files()
+            if unstaged_files:
+                # file_selector = FileSelector()
+                # file_tree = file_selector.build_file_tree(unstaged_files)
+                # file_map, choices = file_selector.flatten_tree(file_tree)
+                from questionary import checkbox
+                selected = checkbox(
+                    "请选择要add的文件：",
+                    choices=unstaged_files
+                ).ask()
+                # selected = file_selector.on_checkbox_select(selected, file_map)
+                print(selected)
+                
+                if selected:
+                    git_op.execute_add(selected)
+                    UIUtils.show_success("文件已添加到暂存区")
+                    # 生成并执行commit
+                    diff_content = git_op.get_staged_diff()
+                    while True:
+                        with Live(Spinner(name="dots", text="正在生成commit信息...")):
+                            commit_msg = _generate_commit(generator, diff_content)
+                        UIUtils.show_commit_preview(commit_msg)
+                        try:
+                            choice = typer.prompt("请选择操作 [u]使用/q退出/e编辑/r重新生成").lower()
+                        except click.Abort:
+                            raise KeyboardInterrupt
+                        
+                        if choice == 'u':
+                            generator.execute_commit(commit_msg)
+                            UIUtils.show_success("\n提交成功！")
+                            break
+                        elif choice == 'q':
+                            UIUtils.show_warning("\n已取消提交")
+                            break
+                        elif choice == 'e':
+                            edited_msg = typer.edit(commit_msg)
+                            if edited_msg:
+                                generator.execute_commit(edited_msg)
+                                UIUtils.show_success("\n提交成功！")
+                                break
+                        elif choice == 'r':
+                            continue
+                        else:
+                            UIUtils.show_error("\n无效的选择，请重新输入")
+                else:
+                    UIUtils.show_warning("\n未选择任何文件，已跳过add操作")
+            else:
+                UIUtils.show_warning("没有未暂存的文件，已跳过add操作")
+        # 检查未推送的提交
+        unpushed_commits = git_op.get_unpushed_commits()
+        if unpushed_commits:
+            # 展示未推送提交
+            UIUtils.show_unpushed_commits(unpushed_commits)
+            
+            # 自动选择全部提交
+            selected_ids = [commit['commit_id'] for commit in unpushed_commits]
+            
+            if typer.confirm(f"\n确认推送以下{len(selected_ids)}个提交到[bold]{remote}/{branch}[/]分支？"):
+                try:
+                    git_op.execute_push(remote, branch, selected_ids)
+                    UIUtils.show_success(f"成功推送 {len(selected_ids)} 个提交！")
+                except ValueError as e:
+                    UIUtils.show_error(f"提交顺序验证失败: {str(e)}")
+        else:
+            UIUtils.show_warning("当前分支没有需要推送的提交")
     
     except KeyboardInterrupt:
-        console.print("[yellow]\n操作已取消[/]")
+        UIUtils.show_warning("\n操作已取消")
         return
     except Exception as e:
-        console.print(f"[bold red]发生错误：[/] {str(e)}")
+        UIUtils.show_error(str(e))
         raise typer.Exit(code=1)
+    
 
 def _generate_commit(generator, diff_content):
     """生成commit信息核心逻辑"""
     try:
         return generator.generate_commit_message(diff_content)
     except Exception as e:
-        console.print(f"[bold red]生成失败:[/] {str(e)}")
+        Console().print(f"[bold red]生成失败:[/] {str(e)}")
         raise typer.Exit(code=1)
 
 
@@ -447,7 +494,7 @@ def _preview_commit_msg(commit_msg):
         border_style="green",
         padding=(1, 4)
     )
-    console.print(panel)
+    Console().print(panel)
 
 
 
@@ -475,12 +522,12 @@ def commit(
             border_style="green",
             padding=(1, 2)
         )
-        console.print(panel)
+        Console().print(panel)
         raise typer.Exit()
     
     config = ConfigManager()
     if not config.get("current_provider"):
-        console.print("[bold red]错误：[/] 请先配置AI模型后再使用此功能")
+        Console().print("[bold red]错误：[/] 请先配置AI模型后再使用此功能")
         raise typer.Exit(code=1)
 
     try:
@@ -489,16 +536,16 @@ def commit(
         # 检查是否存在冲突
         has_conflicts, conflict_files, conflict_blocks = generator.check_conflicts()
         if has_conflicts:
-            console.print("[bold red]错误：[/] 检测到Git冲突，请先解决以下冲突后再执行操作")
-            console.print("\n[bold]冲突文件列表：[/]")
+            Console().print("[bold red]错误：[/] 检测到Git冲突，请先解决以下冲突后再执行操作")
+            Console().print("\n[bold]冲突文件列表：[/]")
             for i, file in enumerate(conflict_files, 1):
-                console.print(f"  {i}. {file}")
+                Console().print(f"  {i}. {file}")
             
             # 显示冲突代码块
             if conflict_blocks:
-                console.print("\n[bold]冲突代码块：[/]")
+                Console().print("\n[bold]冲突代码块：[/]")
                 for file, blocks in conflict_blocks.items():
-                    console.print(f"\n[bold]文件：[/] {file}")
+                    Console().print(f"\n[bold]文件：[/] {file}")
                     for i, block in enumerate(blocks, 1):
                         panel = Panel(
                             block,
@@ -506,15 +553,15 @@ def commit(
                             border_style="red",
                             padding=(1, 2)
                         )
-                        console.print(panel)
+                        Console().print(panel)
             
-            console.print("\n[bold yellow]提示：[/] 请解决冲突后再执行此命令")
+            Console().print("\n[bold yellow]提示：[/] 请解决冲突后再执行此命令")
             raise typer.Exit(code=1)
             
         diff_content = generator.get_staged_diff()
         
         if not diff_content:
-            console.print("[bold yellow]警告：[/] 没有检测到暂存区文件变更")
+            Console().print("[bold yellow]警告：[/] 没有检测到暂存区文件变更")
             raise typer.Exit(code=1)
 
         while True:
@@ -530,27 +577,27 @@ def commit(
             
             if choice == 'u':
                 generator.execute_commit(commit_msg)
-                console.print("[bold green]提交成功！[/]")
+                Console().print("[bold green]提交成功！[/]")
                 break
             elif choice == 'q':
-                console.print("[yellow]已取消提交[/]")
+                Console().print("[yellow]已取消提交[/]")
                 break
             elif choice == 'e':
                 edited_msg = typer.edit(commit_msg)
                 if edited_msg:
                     generator.execute_commit(edited_msg)
-                    console.print("[bold green]提交成功！[/]")
+                    Console().print("[bold green]提交成功！[/]")
                     break
             elif choice == 'r':
                 continue
             else:
-                console.print("[red]无效选项，请重新选择[/]")
+                Console().print("[red]无效选项，请重新选择[/]")
 
     except KeyboardInterrupt:
-        console.print("[yellow]\n操作已取消[/]")
+        Console().print("[yellow]\n操作已取消[/]")
         return
     except Exception as e:
-        console.print(f"[bold red]发生错误：[/] {str(e)}")
+        Console().print(f"[bold red]发生错误：[/] {str(e)}")
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":

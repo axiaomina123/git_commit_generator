@@ -17,7 +17,7 @@ class UIUtils:
             prompt,
             choices=[
                 {
-                    "name": f"{commit['author']} {commit['commit_id'][:6]} {commit['message']} ({commit['date']})",
+                    "name": f"{commit['commit_id'][:6]} {commit['author']} {commit['message']} ({commit['date']})",
                     "value": commit['commit_id']
                 } for commit in choices
             ]
@@ -124,6 +124,25 @@ class UIUtils:
         """
         cls.console.print(f"[bold yellow]{message}[/]")
     
+    @classmethod
+    def show_unpushed_commits(cls, commits: List[dict]):
+        """显示未推送的commit列表
+        
+        Args:
+            commits: 未推送的commit字典列表
+        """
+        content = "\n".join([
+            f"• [bold cyan]{commit['commit_id'][:6]}[/] {commit['author']}: "
+            f"{commit['message']} ({commit['date']})"
+            for commit in commits
+        ])
+        cls.show_panel(
+            content,
+            f"[bold yellow]未推送的提交 ({len(commits)}个)[/]",
+            "yellow",
+            (1, 2)
+        )
+
     @classmethod
     def show_error(cls, message: str):
         """显示错误信息
