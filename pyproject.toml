@@ -1,19 +1,17 @@
 [project]
 name = "quick-auto-git"
-version = "0.1.1"
+version = "0.1.2"
 description = "基于AI的Git提交信息生成工具，帮助开发者快速生成规范的提交信息"
-authors = [
-    {name = "xiaoming", email = "xiaomindexiaomin@126.com"}
-]
+authors = [{ name = "xiaoming", email = "xiaomindexiaomin@126.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Version Control :: Git",
-    "Intended Audience :: Developers"
+    "Intended Audience :: Developers",
 ]
 dependencies = [
     "gitpython >=3.1",
@@ -27,10 +25,15 @@ dependencies = [
 [project.scripts]
 git-ai = "git_commit_generator.cli.main:app"
 
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
-[tool.setuptools]
-packages = ["git_commit_generator"]
-package-dir = {"" = "."}
+[tool.pdm.build]
+package-dir = "."
+excludes = ["tests"]
+includes = ["git_commit_generator"]
+source-includes = ["LICENSE", "README.md", "pyproject.toml"]
 
 [project.urls]
 "Homepage" = "https://github.com/axiaomina123/git-commit-generator"
