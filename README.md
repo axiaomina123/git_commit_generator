@@ -37,7 +37,7 @@ Git Commit Generator 是一个基于AI的Git提交信息生成工具，帮助开
 
 ```bash
 # 使用pip安装
-pip install git-commit-generator
+pip install quick-auto-git
 
 # 或者从源码安装
 git clone https://github.com/yourusername/git-commit-generator.git
