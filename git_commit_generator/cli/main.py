@@ -316,6 +316,7 @@ def quick_push(
     try:
         generator = CommitGenerator(ConfigManager())
         git_op = GitOperations()
+        branch = branch if branch else git_op.get_current_branch()
         
         # 检查是否存在冲突
         has_conflicts, conflict_files, conflict_blocks = generator.check_conflicts()
@@ -341,16 +342,11 @@ def quick_push(
                 # 处理未暂存的文件
                 unstaged_files = git_op.get_unstaged_files()
                 if unstaged_files:
-                    # file_selector = FileSelector()
-                    # file_tree = file_selector.build_file_tree(unstaged_files)
-                    # file_map, choices = file_selector.flatten_tree(file_tree)
                     from questionary import checkbox
                     selected = checkbox(
                         "请选择要add的文件：",
                         choices=unstaged_files
-                    ).ask()
-                    # selected = file_selector.on_checkbox_select(selected, file_map)
-                    
+                    ).ask()                    
                     if selected:
                         git_op.execute_add(selected)
                         UIUtils.show_success("文件已添加到暂存区")
@@ -405,17 +401,11 @@ def quick_push(
             # 处理未暂存的文件
             unstaged_files = git_op.get_unstaged_files()
             if unstaged_files:
-                # file_selector = FileSelector()
-                # file_tree = file_selector.build_file_tree(unstaged_files)
-                # file_map, choices = file_selector.flatten_tree(file_tree)
                 from questionary import checkbox
                 selected = checkbox(
                     "请选择要add的文件：",
                     choices=unstaged_files
-                ).ask()
-                # selected = file_selector.on_checkbox_select(selected, file_map)
-                print(selected)
-                
+                ).ask()                
                 if selected:
                     git_op.execute_add(selected)
                     UIUtils.show_success("文件已添加到暂存区")
@@ -450,7 +440,7 @@ def quick_push(
                 else:
                     UIUtils.show_warning("\n未选择任何文件，已跳过add操作")
             else:
-                UIUtils.show_warning("没有未暂存的文件，已跳过add操作")
+                UIUtils.show_warning("\n没有未暂存的文件，已跳过add操作")
         # 检查未推送的提交
         unpushed_commits = git_op.get_unpushed_commits()
         if unpushed_commits:
@@ -460,12 +450,10 @@ def quick_push(
             # 自动选择全部提交
             selected_ids = [commit['commit_id'] for commit in unpushed_commits]
             
-            if typer.confirm(f"\n确认推送以下{len(selected_ids)}个提交到[bold]{remote}/{branch}[/]分支？"):
-                try:
-                    git_op.execute_push(remote, branch, selected_ids)
-                    UIUtils.show_success(f"成功推送 {len(selected_ids)} 个提交！")
-                except ValueError as e:
-                    UIUtils.show_error(f"提交顺序验证失败: {str(e)}")
+            if typer.confirm(f"\n确认推送以下{len(selected_ids)}个提交到{remote}/{branch}分支？", default=True):
+                git_op.execute_push(remote, branch, selected_ids)
+                UIUtils.show_success(f"成功推送 {len(selected_ids)} 个提交！")
+                
         else:
             UIUtils.show_warning("当前分支没有需要推送的提交")
     

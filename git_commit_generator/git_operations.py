@@ -122,13 +122,19 @@ class GitOperations:
             return False
     
     @classmethod
+    def get_current_branch(cls) -> str:
+        """获取当前分支名称"""
+        result = cls.run_git_command(['git', 'branch', '--show-current'])
+        if result.returncode != 0 or not result.stdout.strip():
+            raise RuntimeError("获取当前分支失败: " + result.stderr)
+        return result.stdout.strip()
+
+    @classmethod
     def get_unpushed_commits(cls) -> List[dict]:
         """获取未推送的提交列表"""
         try:
-    
             # 获取当前分支名称
-            branch_result = cls.run_git_command(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
-            current_branch = branch_result.stdout.strip()
+            current_branch = cls.get_current_branch()
             
             # 检查是否设置上游分支
             try:

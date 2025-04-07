@@ -79,6 +79,17 @@ class UIUtils:
         cls.console.print("[bold]已暂存的文件：[/]")
         for i, file in enumerate(files, 1):
             cls.console.print(f"  {i}. {file}")
+
+        content = "\n".join([
+            f"  {i}. {file}"
+            for i, file in enumerate(files, 1)
+        ])
+        cls.show_panel(
+            content,
+            f"[bold yellow]已暂存的文件 ({len(files)}个)[/]",
+            "yellow",
+            (1, 2)
+        )
     
     @classmethod
     def show_commit_preview(cls, commit_msg: str):
