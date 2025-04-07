@@ -41,15 +41,8 @@ class GitOperations:
         Returns:
             subprocess.CompletedProcess: 命令执行结果
         """
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            errors='ignore',
-            check=check
-        )
-        return result
+        # 添加编码处理，确保中文路径正确识别
+        return subprocess.run(cmd, check=check, encoding='utf-8', errors='ignore', capture_output=True)
     
     @classmethod
     def get_staged_diff(cls):
@@ -87,7 +80,29 @@ class GitOperations:
         """添加文件到暂存区"""
         if not files:
             return False
-        cls.run_git_command(['git', 'add'] + files)
+        
+        # 改进路径处理逻辑
+        normalized_files = []
+        for f in files:
+            try:
+                # 先标准化路径
+                norm_path = os.path.normpath(f)
+                # 确保路径存在
+                if not os.path.exists(norm_path):
+                    logger.warning(f"文件路径不存在: {norm_path}")
+                    continue
+                # 处理特殊字符
+                encoded_path = norm_path.encode('utf-8').decode('utf-8')
+                normalized_files.append(encoded_path)
+            except Exception as e:
+                logger.error(f"处理文件路径时出错: {f}, 错误: {str(e)}")
+                continue
+                
+        if not normalized_files:
+            logger.error("没有有效的文件路径可以添加")
+            return False
+            
+        cls.run_git_command(['git', 'add'] + normalized_files)
         return True
     
     @classmethod
