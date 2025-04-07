@@ -9,7 +9,6 @@ from rich.panel import Panel
 
 
 app = typer.Typer()
-console = Console()
 config_app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 app.add_typer(
     config_app,
@@ -556,5 +555,3 @@ def commit(
 
 if __name__ == "__main__":
     app()
-    print("test test test!!!!!!!!!!!!!!")
-    print('ffrfrfrf')
