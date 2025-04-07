@@ -123,11 +123,11 @@ class GitOperations:
             push_cmd = ['git', 'push', remote]
         
         # 如果指定了commit_ids，使用cherry-pick方式推送
-        if commit_ids:
-            # 使用指定的提交ID进行推送
-            commit_range = f"{commit_ids[0]}^..{commit_ids[-1]}"
-            push_cmd = ['git', 'push', remote, commit_range]
-            logger.info(f"正在推送提交范围: {commit_range}")
+        # if commit_ids:
+        #     # 使用指定的提交ID进行推送
+        #     commit_range = f"{commit_ids[0]}^..{commit_ids[-1]}"
+        #     push_cmd = ['git', 'push', remote, commit_range]
+        #     logger.info(f"正在推送提交范围: {commit_range}")
         
         result = cls.run_git_command(push_cmd)
         if result.returncode == 0:
